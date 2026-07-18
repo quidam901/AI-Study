@@ -11,6 +11,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- Firebase SDK (v9 compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
     <!-- Tailwind CSS with Custom Config for 60-30-10 Rule -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -56,124 +60,107 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
         
+        /* Modal Background */
+        .modal-overlay {
+            background-color: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="h-screen w-full flex overflow-hidden font-sans bg-bg60">
+<body class="h-screen w-full flex flex-col overflow-hidden font-sans bg-bg60 text-text30">
 
-    <!-- 0. Role Selection (Login) Screen -->
-    <div id="role-selection" class="absolute inset-0 z-50 bg-bg60 flex flex-col items-center justify-center transition-opacity duration-300">
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 bg-accent10 text-bg60 px-6 py-3 rounded-xl border-[3px] border-text30 font-bold shadow-flat transform transition-transform translate-x-[150%] z-[100]">
+        알림 메시지
+    </div>
+
+    <!-- Login Modal (Teacher) -->
+    <div id="login-modal" class="fixed inset-0 modal-overlay z-[60] flex items-center justify-center hidden">
+        <div class="bg-white border-[3px] border-text30 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-flat text-center">
+            <i class="fa-solid fa-lock text-5xl text-accent10 mb-4"></i>
+            <h2 class="text-2xl font-black mb-2">교사 인증</h2>
+            <p class="text-sm font-medium mb-6">대시보드에 접근하려면<br>비밀번호를 입력하세요.</p>
+            <input type="password" id="teacher-pw" class="w-full p-3 border-[3px] border-text30 rounded-xl bg-bg60 text-center font-bold text-xl mb-4 focus:outline-none focus:border-accent10" placeholder="****">
+            <div class="flex gap-3">
+                <button onclick="closeLoginModal()" class="flex-1 btn-flat bg-bg60 text-text30 py-3 rounded-xl font-bold">취소</button>
+                <button onclick="checkTeacherPassword()" class="flex-1 btn-flat bg-accent10 text-white py-3 rounded-xl font-bold">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Data Clear Modal -->
+    <div id="confirm-modal" class="fixed inset-0 modal-overlay z-[60] flex items-center justify-center hidden">
+        <div class="bg-white border-[3px] border-text30 rounded-2xl p-8 max-w-sm w-full mx-4 shadow-flat text-center border-t-8 border-t-red-500">
+            <i class="fa-solid fa-triangle-exclamation text-5xl text-red-500 mb-4"></i>
+            <h2 class="text-2xl font-black mb-2">데이터 초기화</h2>
+            <p class="text-sm font-medium mb-6">모든 학생들의 제출 데이터가<br>삭제됩니다. 계속하시겠습니까?</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 btn-flat bg-bg60 text-text30 py-3 rounded-xl font-bold">취소</button>
+                <button onclick="clearAllData()" class="flex-1 btn-flat bg-red-500 text-white border-text30 py-3 rounded-xl font-bold">삭제하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Role Selection Screen -->
+    <div id="role-selection" class="flex-grow flex flex-col items-center justify-center p-6 w-full h-full relative z-10">
         <div class="text-center mb-12">
-            <h1 class="text-5xl font-black mb-4">기상 예보관 프로젝트</h1>
-            <p class="text-xl font-bold text-slate-500">역할을 선택하여 대시보드에 접속하세요</p>
+            <h1 class="text-5xl md:text-6xl font-black leading-tight tracking-tighter mb-4">
+                기상 예보관<br>
+                <span class="text-accent10">프로젝트</span>
+            </h1>
+            <p class="text-xl font-bold text-slate-500">지구과학 I - 권혜정 선생님</p>
         </div>
         
-        <div class="flex flex-col md:flex-row gap-8 w-full max-w-4xl px-8">
-            <!-- Student Login -->
-            <button onclick="selectRole('student')" class="flex-1 btn-flat bg-white border-[3px] border-text30 p-10 rounded-3xl shadow-flat flex flex-col items-center hover:bg-blue-50 transition group">
-                <div class="w-24 h-24 bg-bg60 border-[3px] border-text30 rounded-full flex items-center justify-center mb-6 group-hover:bg-accent10 group-hover:text-white transition-colors">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl w-full">
+            <button onclick="selectRole('student')" class="group border-[3px] border-text30 rounded-3xl p-10 bg-white shadow-flat hover:bg-slate-50 transition-all hover:translate-y-[-4px]">
+                <div class="bg-bg60 w-24 h-24 rounded-full border-[3px] border-text30 flex items-center justify-center mx-auto mb-6 group-hover:bg-accent10 group-hover:text-white transition-colors">
                     <i class="fa-solid fa-user-graduate text-4xl"></i>
                 </div>
-                <h2 class="text-3xl font-black mb-2">학생용 대시보드</h2>
-                <p class="font-medium text-slate-600">자료 수집, 영상 분석, 예보 대본 제출</p>
+                <h2 class="text-3xl font-black mb-2">학생용</h2>
+                <p class="font-medium text-slate-500">기상 자료 수집, 분석 및 과제 제출</p>
             </button>
-
-            <!-- Teacher Login -->
-            <button onclick="selectRole('teacher')" class="flex-1 btn-flat bg-text30 text-bg60 border-[3px] border-text30 p-10 rounded-3xl shadow-flat flex flex-col items-center hover:bg-slate-800 transition group">
-                <div class="w-24 h-24 bg-bg60 border-[3px] border-text30 text-text30 rounded-full flex items-center justify-center mb-6 group-hover:bg-accent10 group-hover:border-accent10 group-hover:text-white transition-colors">
+            
+            <button onclick="openLoginModal()" class="group border-[3px] border-text30 rounded-3xl p-10 bg-white shadow-flat hover:bg-slate-50 transition-all hover:translate-y-[-4px]">
+                <div class="bg-bg60 w-24 h-24 rounded-full border-[3px] border-text30 flex items-center justify-center mx-auto mb-6 group-hover:bg-text30 group-hover:text-white transition-colors">
                     <i class="fa-solid fa-chalkboard-user text-4xl"></i>
                 </div>
-                <h2 class="text-3xl font-black mb-2 text-white">교사용 대시보드</h2>
-                <p class="font-medium text-slate-400">학생 제출물 확인 및 데이터 일괄 다운로드</p>
+                <h2 class="text-3xl font-black mb-2">교사용</h2>
+                <p class="font-medium text-slate-500">학생 제출 결과물 확인 및 취합</p>
             </button>
         </div>
     </div>
 
-    <!-- Password Modal -->
-    <div id="password-modal" class="hidden absolute inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
-        <div class="bg-white p-8 rounded-2xl shadow-flat border-[3px] border-text30 max-w-sm w-full mx-4 transform transition-all">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-bg60 border-[3px] border-text30 text-text30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-lock text-3xl"></i>
-                </div>
-                <h3 class="text-2xl font-black">비밀번호 입력</h3>
-                <p class="text-sm font-bold text-slate-500 mt-2">교사용 대시보드 접근 권한이 필요합니다.</p>
-            </div>
-            <div class="mb-6">
-                <input type="password" id="teacher-password" class="w-full p-4 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 text-center font-bold text-lg tracking-widest" placeholder="****">
-                <p class="text-xs text-center text-slate-400 mt-2">* 초기 비밀번호: 1234</p>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="closePasswordModal()" class="flex-1 btn-flat bg-bg60 text-text30 border-[3px] border-text30 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">
-                    취소
-                </button>
-                <button onclick="verifyTeacherPassword()" class="flex-1 btn-flat bg-accent10 text-white border-[3px] border-accent10 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
-                    확인
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Confirm Delete Modal (Replacing browser alert) -->
-    <div id="confirm-modal" class="hidden absolute inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
-        <div class="bg-white p-8 rounded-2xl shadow-flat border-[3px] border-text30 max-w-sm w-full mx-4 transform transition-all">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-red-100 border-[3px] border-red-500 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
-                </div>
-                <h3 class="text-2xl font-black">데이터 초기화</h3>
-                <p class="text-sm font-bold text-slate-500 mt-2">정말로 모든 학생의 데이터를 삭제하시겠습니까?<br>이 작업은 되돌릴 수 없습니다.</p>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="closeConfirmModal()" class="flex-1 btn-flat bg-bg60 text-text30 border-[3px] border-text30 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors">
-                    취소
-                </button>
-                <button onclick="executeClearSubmissions()" class="flex-1 btn-flat bg-red-600 text-white border-[3px] border-text30 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors">
-                    삭제하기
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== STUDENT DASHBOARD ==================== -->
-    <div id="student-dashboard" class="hidden w-full h-full flex">
+    <!-- 2. Student Dashboard -->
+    <div id="student-app" class="hidden h-full w-full flex overflow-hidden">
         <!-- Sidebar Navigation -->
         <nav class="w-72 border-r-[3px] border-text30 bg-bg60 flex flex-col h-full flex-shrink-0 z-10 relative">
-            <div class="p-6 border-b-[3px] border-text30 flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-black leading-tight tracking-tighter">
-                        기상 예보관<br>
-                        <span class="text-accent10">학습 대시보드</span>
-                    </h1>
-                    <p class="text-sm font-bold mt-2">지구과학 I</p>
-                </div>
+            <div class="p-6 border-b-[3px] border-text30">
+                <button onclick="returnToHome()" class="text-xs font-bold text-slate-500 hover:text-accent10 mb-2 block"><i class="fa-solid fa-arrow-left"></i> 처음으로</button>
+                <h1 class="text-2xl font-black leading-tight tracking-tighter">
+                    학생 워크스페이스
+                </h1>
             </div>
             
             <div class="flex-grow p-4 space-y-2 overflow-y-auto">
-                <!-- Navigation Buttons -->
                 <button onclick="switchTab('tab-home')" id="nav-tab-home" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-text30 text-bg60 transition-colors nav-btn">
                     <i class="fa-solid fa-house mr-2"></i> 프로젝트 홈
                 </button>
                 <button onclick="switchTab('tab-step1')" id="nav-tab-step1" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
-                    <i class="fa-solid fa-video mr-2"></i> STEP 1. 도입 (예습)
+                    <i class="fa-solid fa-video mr-2"></i> STEP 1. 도입
                 </button>
                 <button onclick="switchTab('tab-step2')" id="nav-tab-step2" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
-                    <i class="fa-solid fa-cloud-sun-rain mr-2"></i> STEP 2. 기상 자료 수집
+                    <i class="fa-solid fa-cloud-sun-rain mr-2"></i> STEP 2. 자료 수집
                 </button>
                 <button onclick="switchTab('tab-step3')" id="nav-tab-step3" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
-                    <i class="fa-solid fa-film mr-2 text-accent10"></i> STEP 3. 통합 영상 분석
+                    <i class="fa-solid fa-film mr-2 text-accent10"></i> STEP 3. 영상 분석
                 </button>
                 <button onclick="switchTab('tab-step4')" id="nav-tab-step4" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
                     <i class="fa-solid fa-pen-to-square mr-2"></i> STEP 4. 나도 예보관!
-                </button>
-            </div>
-            
-            <div class="p-4 border-t-[3px] border-text30 text-center">
-                <button onclick="logout()" class="w-full text-sm font-bold py-2 border-[2px] border-text30 rounded-lg hover:bg-slate-200 transition">
-                    <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> 처음으로 (역할 변경)
                 </button>
             </div>
         </nav>
@@ -181,16 +168,9 @@
         <!-- Main Content Area -->
         <main class="flex-grow bg-bg60 h-full overflow-y-auto relative p-8 md:p-12">
             
-            <!-- Toast Notification -->
-            <div id="toast" class="fixed top-5 right-5 bg-accent10 text-bg60 px-6 py-3 rounded-xl border-[3px] border-text30 font-bold shadow-flat transform transition-transform translate-x-[150%] z-50">
-                알림 메시지
-            </div>
-
-            <!-- 0. Home Tab -->
+            <!-- Home Tab -->
             <div id="tab-home" class="tab-content active max-w-4xl mx-auto">
-                <div class="inline-block px-4 py-1 border-[3px] border-text30 rounded-full text-accent10 font-bold mb-6">
-                    고등학교 2학년 1학기
-                </div>
+                <div class="inline-block px-4 py-1 border-[3px] border-text30 rounded-full text-accent10 font-bold mb-6">고등학교 2학년 1학기</div>
                 <h2 class="text-5xl font-black mb-8 border-b-[4px] border-text30 pb-4">기압계의 이동에 따른 날씨 분석</h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
@@ -202,7 +182,6 @@
                             중위도 저기압과 고기압이 통과할 때 날씨의 변화를 일기도, 위성 영상, 레이더 영상을 종합하여 예측할 수 있다.
                         </p>
                     </div>
-                    
                     <div class="border-[3px] border-accent10 p-8 rounded-2xl bg-white shadow-flat">
                         <h3 class="text-2xl font-bold mb-4 flex items-center text-accent10">
                             <i class="fa-solid fa-circle-question text-3xl mr-3"></i> 탐구 질문
@@ -212,23 +191,12 @@
                         </p>
                     </div>
                 </div>
-                
-                <div class="mt-12 p-6 border-[3px] border-text30 rounded-2xl bg-text30 text-bg60 flex items-center justify-between">
-                    <div>
-                        <h4 class="text-xl font-bold mb-1">학습을 시작할 준비가 되었나요?</h4>
-                        <p class="text-sm">왼쪽 메뉴의 STEP 1부터 차례대로 진행해주세요.</p>
-                    </div>
-                    <button onclick="switchTab('tab-step1')" class="bg-accent10 text-white px-6 py-3 rounded-xl font-bold border-[3px] border-bg60 hover:bg-blue-700 transition">
-                        시작하기 <i class="fa-solid fa-arrow-right ml-2"></i>
-                    </button>
-                </div>
             </div>
 
-            <!-- 1. STEP 1 Tab -->
+            <!-- STEP 1 Tab -->
             <div id="tab-step1" class="tab-content max-w-4xl mx-auto">
                 <h2 class="text-4xl font-black mb-2">도입: 기상 예보 활동 예습</h2>
                 <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">매일의 날씨 예보는 어떻게 달라질까요?</p>
-                
                 <div class="border-[3px] border-text30 rounded-2xl overflow-hidden shadow-flat bg-white mb-8">
                     <div class="bg-text30 text-bg60 px-4 py-2 font-bold flex items-center">
                         <i class="fa-solid fa-play mr-2"></i> 오늘의 기상 예보 영상
@@ -236,83 +204,63 @@
                     <div class="aspect-video w-full bg-slate-200 flex flex-col items-center justify-center relative">
                         <i class="fa-brands fa-youtube text-6xl text-text30 mb-4"></i>
                         <p class="font-bold text-lg">선생님이 보여주시는 동영상을 시청하세요.</p>
-                        <p class="text-sm text-slate-500 mt-2">(기상청 누리집 또는 뉴스 기상예보)</p>
                     </div>
                 </div>
-                
-                <div class="border-[3px] border-text30 p-6 rounded-2xl bg-white shadow-flat border-l-8 border-l-accent10">
-                    <h3 class="font-bold text-xl mb-2"><i class="fa-solid fa-lightbulb text-accent10 mr-2"></i> 생각해보기</h3>
-                    <p class="font-medium text-lg">예보관들은 내일의 날씨를 맞추기 위해 어떤 자료들을 분석하고 있을까요?</p>
-                </div>
             </div>
 
-            <!-- 2. STEP 2 Tab -->
+            <!-- STEP 2 Tab -->
             <div id="tab-step2" class="tab-content max-w-4xl mx-auto">
                 <h2 class="text-4xl font-black mb-2">자료 수집: 기상 빅데이터 모으기</h2>
-                <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">14일간 12시간 간격(총 28장)의 자료를 캡처하여 각 항목에 업로드하세요. (파일명을 날짜순으로 정렬 권장)</p>
+                <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">14일간 12시간 간격(총 28장)의 자료를 캡처하여 각 항목에 업로드하세요.</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <!-- 일기도 Upload -->
+                    <!-- 일기도 -->
                     <label class="cursor-pointer group relative block">
                         <input type="file" multiple accept="image/*" class="hidden" onchange="processFiles(this, 'map')">
-                        <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 transition-colors flex flex-col items-center justify-center text-center">
+                        <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 flex flex-col items-center text-center">
                             <i class="fa-solid fa-map-location-dot text-5xl text-accent10 mb-4"></i>
                             <h3 class="text-xl font-bold mb-2">일기도 업로드</h3>
-                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장의 이미지를 선택하세요</p>
-                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1">
-                                <span id="count-map" class="font-black text-accent10">0 / 28</span>
-                            </div>
+                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장 선택</p>
+                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-map" class="font-black text-accent10">0 / 28</span></div>
                         </div>
                     </label>
-                    
-                    <!-- 위성 영상 Upload -->
+                    <!-- 위성 영상 -->
                     <label class="cursor-pointer group relative block">
                         <input type="file" multiple accept="image/*" class="hidden" onchange="processFiles(this, 'sat')">
-                        <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 transition-colors flex flex-col items-center justify-center text-center">
+                        <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 flex flex-col items-center text-center">
                             <i class="fa-solid fa-satellite text-5xl text-accent10 mb-4"></i>
-                            <h3 class="text-xl font-bold mb-2">위성 영상 업로드</h3>
-                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장의 이미지를 선택하세요</p>
-                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1">
-                                <span id="count-sat" class="font-black text-accent10">0 / 28</span>
-                            </div>
+                            <h3 class="text-xl font-bold mb-2">위성 업로드</h3>
+                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장 선택</p>
+                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-sat" class="font-black text-accent10">0 / 28</span></div>
                         </div>
                     </label>
-
-                    <!-- 레이더 영상 Upload -->
+                    <!-- 레이더 영상 -->
                     <label class="cursor-pointer group relative block">
                         <input type="file" multiple accept="image/*" class="hidden" onchange="processFiles(this, 'radar')">
-                        <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 transition-colors flex flex-col items-center justify-center text-center">
+                        <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 flex flex-col items-center text-center">
                             <i class="fa-solid fa-satellite-dish text-5xl text-accent10 mb-4"></i>
-                            <h3 class="text-xl font-bold mb-2">레이더 영상 업로드</h3>
-                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장의 이미지를 선택하세요</p>
-                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1">
-                                <span id="count-radar" class="font-black text-accent10">0 / 28</span>
-                            </div>
+                            <h3 class="text-xl font-bold mb-2">레이더 업로드</h3>
+                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장 선택</p>
+                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-radar" class="font-black text-accent10">0 / 28</span></div>
                         </div>
                     </label>
                 </div>
-                
                 <div class="text-center mt-8">
-                    <a href="https://www.weather.go.kr" target="_blank" class="inline-block btn-flat shadow-flat bg-text30 text-bg60 px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-800">
-                        <i class="fa-solid fa-arrow-up-right-from-square mr-2"></i> 기상청 날씨누리 접속하기
-                    </a>
+                    <a href="https://www.weather.go.kr" target="_blank" class="inline-block btn-flat shadow-flat bg-text30 text-bg60 px-8 py-4 rounded-xl font-bold text-lg">기상청 날씨누리 접속하기</a>
                 </div>
             </div>
 
-            <!-- 3. STEP 3 Tab -->
+            <!-- STEP 3 Tab -->
             <div id="tab-step3" class="tab-content max-w-5xl mx-auto">
-                <div class="flex justify-between items-end mb-2">
-                    <h2 class="text-4xl font-black">통합 영상 포트폴리오</h2>
-                </div>
-                <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">업로드한 3가지 기상 자료를 동시에 재생하여 날씨 변화를 입체적으로 분석하세요.</p>
+                <h2 class="text-4xl font-black mb-2">통합 영상 포트폴리오 분석</h2>
+                <p class="text-lg font-bold text-accent10 mb-6 border-b-[3px] border-text30 pb-4">업로드한 3가지 기상 자료를 동시에 재생하여 날씨 변화를 입체적으로 분석하세요.</p>
                 
-                <div class="bg-white border-[3px] border-text30 rounded-2xl p-6 shadow-flat mb-8">
+                <div class="bg-white border-[3px] border-text30 rounded-2xl p-6 shadow-flat mb-6">
                     <!-- Player Controls -->
                     <div class="flex flex-col md:flex-row items-center justify-between mb-6 border-b-[3px] border-text30 pb-6 gap-4">
-                        <button id="play-btn" onclick="togglePlay()" class="btn-flat bg-accent10 text-white px-8 py-3 rounded-xl font-black text-lg w-full md:w-auto shrink-0 flex justify-center items-center">
+                        <button id="play-btn" onclick="togglePlay()" class="btn-flat bg-accent10 text-white px-8 py-3 rounded-xl font-black text-lg shrink-0 w-full md:w-auto flex justify-center items-center">
                             <i class="fa-solid fa-play mr-2"></i> 재생
                         </button>
-                        
                         <div class="flex-grow w-full flex items-center bg-bg60 p-3 rounded-xl border-[2px] border-text30">
                             <div id="time-display" class="font-black text-xl w-32 shrink-0 text-center text-text30">1일차 00:00</div>
                             <input type="range" id="timeline-slider" min="0" max="27" value="0" class="w-full h-4 bg-white border-[2px] border-text30 rounded-lg appearance-none cursor-pointer mx-4 accent-[#2563EB]" oninput="seekFrame(this.value)">
@@ -322,213 +270,144 @@
                     <!-- 3-Way Video Viewer -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="border-[3px] border-text30 rounded-xl overflow-hidden bg-bg60 flex flex-col">
-                            <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg border-b-[3px] border-text30">일기도</div>
-                            <div class="relative w-full aspect-[4/3]">
-                                <img id="viewer-map" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white">
-                            </div>
+                            <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg">일기도</div>
+                            <div class="relative w-full aspect-[4/3]"><img id="viewer-map" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white"></div>
                         </div>
                         <div class="border-[3px] border-text30 rounded-xl overflow-hidden bg-bg60 flex flex-col">
-                            <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg border-b-[3px] border-text30">위성 영상</div>
-                            <div class="relative w-full aspect-[4/3]">
-                                <img id="viewer-sat" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white">
-                            </div>
+                            <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg">위성 영상</div>
+                            <div class="relative w-full aspect-[4/3]"><img id="viewer-sat" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white"></div>
                         </div>
                         <div class="border-[3px] border-text30 rounded-xl overflow-hidden bg-bg60 flex flex-col">
-                            <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg border-b-[3px] border-text30">레이더 영상</div>
-                            <div class="relative w-full aspect-[4/3]">
-                                <img id="viewer-radar" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white">
-                            </div>
+                            <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg">레이더 영상</div>
+                            <div class="relative w-full aspect-[4/3]"><img id="viewer-radar" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white"></div>
                         </div>
                     </div>
-                    
-                    <div class="mt-6 border-t-[3px] border-text30 pt-6">
-                        <h3 class="font-bold text-xl mb-4"><i class="fa-solid fa-magnifying-glass-chart text-accent10 mr-2"></i> 영상 분석 기록창</h3>
-                        <textarea id="video-analysis" class="w-full h-32 p-4 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-medium resize-none leading-relaxed" placeholder="14일간의 영상을 종합적으로 관찰한 날씨 변화의 특징(기압계의 이동, 전선 통과에 따른 변화 등)을 분석하여 기록해보세요."></textarea>
-                    </div>
+                </div>
+
+                <!-- Analysis Textarea -->
+                <div class="bg-white border-[3px] border-text30 rounded-2xl p-6 shadow-flat">
+                    <h3 class="font-bold text-xl mb-3"><i class="fa-solid fa-pen text-accent10 mr-2"></i> 영상 분석 기록창</h3>
+                    <textarea id="analysis-script" class="w-full h-32 p-4 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-medium resize-none leading-relaxed" placeholder="위 영상을 관찰하고 기압계의 이동 방향, 전선의 위치, 구름과 강수 구역의 변화를 자유롭게 기록해 보세요."></textarea>
                 </div>
             </div>
 
-            <!-- 4. STEP 4 Tab -->
+            <!-- STEP 4 Tab -->
             <div id="tab-step4" class="tab-content max-w-4xl mx-auto">
-                <h2 class="text-4xl font-black mb-2">나도 예보관! (제출)</h2>
-                <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">수집한 자료와 영상 분석을 종합하여 기상 예보관 브리핑 시나리오를 작성하고 최종 제출하세요.</p>
+                <h2 class="text-4xl font-black mb-2">나도 예보관! (최종 제출)</h2>
+                <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">수집 및 분석한 자료를 바탕으로 기상 예보관 브리핑 대본을 작성하고 선생님께 제출합니다.</p>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="col-span-1 border-[3px] border-text30 rounded-2xl p-6 bg-white shadow-flat h-fit">
-                        <h3 class="font-bold text-xl mb-4 border-b-[2px] border-text30 pb-2">분석 포인트</h3>
-                        <ul class="space-y-3 font-medium text-sm">
-                            <li><i class="fa-solid fa-check text-accent10 mr-2"></i> 중위도 저기압/고기압 위치 파악</li>
-                            <li><i class="fa-solid fa-check text-accent10 mr-2"></i> 기압계 이동 방향 확인</li>
-                            <li><i class="fa-solid fa-check text-accent10 mr-2"></i> 전선에 따른 기상 요소 변화</li>
-                            <li><i class="fa-solid fa-check text-accent10 mr-2"></i> 종관 규모 / 중규모 구분</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-span-2 border-[3px] border-text30 rounded-2xl p-6 bg-white shadow-flat">
-                        <h3 class="font-bold text-xl mb-4"><i class="fa-solid fa-microphone-lines text-accent10 mr-2"></i> 예보관 브리핑 대본 작성</h3>
-                        
-                        <div class="flex gap-4 mb-4">
-                            <div class="flex-1">
-                                <label class="block font-bold mb-2 text-sm">학번 <span class="text-red-500">*</span></label>
-                                <input type="text" id="student-id" class="w-full p-3 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-bold" placeholder="예: 20101">
-                            </div>
-                            <div class="flex-1">
-                                <label class="block font-bold mb-2 text-sm">이름 <span class="text-red-500">*</span></label>
-                                <input type="text" id="student-name" class="w-full p-3 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-bold" placeholder="예: 홍길동">
-                            </div>
+                <div class="border-[3px] border-text30 rounded-2xl p-6 bg-white shadow-flat mb-6">
+                    <h3 class="font-bold text-xl mb-4"><i class="fa-solid fa-microphone-lines text-accent10 mr-2"></i> 예보관 브리핑 대본 작성</h3>
+                    <div class="flex gap-4 mb-4">
+                        <div class="flex-1">
+                            <label class="block font-bold mb-2 text-sm">학번</label>
+                            <input type="text" id="student-id" class="w-full p-3 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-bold" placeholder="예: 20101">
                         </div>
+                        <div class="flex-1">
+                            <label class="block font-bold mb-2 text-sm">이름</label>
+                            <input type="text" id="student-name" class="w-full p-3 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-bold" placeholder="예: 홍길동">
+                        </div>
+                    </div>
+                    <textarea id="forecast-script" class="w-full h-56 p-4 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-medium resize-none leading-relaxed" placeholder="시청자 여러분 안녕하십니까. 오늘의 날씨입니다. 
+현재 우리나라 서쪽에서 다가오는 중위도 저기압의 영향으로..."></textarea>
+                </div>
 
-                        <label class="block font-bold mb-2 text-sm mt-4">대본 내용 <span class="text-red-500">*</span></label>
-                        <textarea id="forecast-script" class="w-full h-56 p-4 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-medium resize-none leading-relaxed" placeholder="시청자 여러분 안녕하십니까. 오늘의 날씨입니다. 
-현재 우리나라 서쪽에서 다가오는 중위도 저기압의 영향으로... "></textarea>
-                        
-                        <div class="border-t-[3px] border-dashed border-text30 pt-6 mt-6 flex flex-col md:flex-row gap-4 justify-between items-center">
-                            <button onclick="copyText('forecast-script')" class="btn-flat bg-white text-text30 border-[3px] border-text30 px-6 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors w-full md:w-auto shrink-0">
-                                <i class="fa-regular fa-copy mr-2"></i> 대본 복사
-                            </button>
-                            <div class="flex gap-4 w-full md:w-auto justify-end">
-                                <button onclick="downloadCSV()" class="btn-flat bg-bg60 text-text30 border-[3px] border-text30 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors flex-1 md:flex-none">
-                                    <i class="fa-solid fa-download mr-2"></i> 내보내기
-                                </button>
-                                <button onclick="submitToSpreadsheet()" class="btn-flat bg-accent10 text-white border-[3px] border-accent10 px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors flex-1 md:flex-none">
-                                    <i class="fa-solid fa-cloud-arrow-up mr-2"></i> 최종 제출
-                                </button>
-                            </div>
-                        </div>
-                        <p class="text-xs font-bold text-slate-500 mt-4 text-right">* 제출 시 분석 기록과 대본이 선생님께 전송됩니다.</p>
-                    </div>
+                <div class="bg-white border-[3px] border-text30 rounded-2xl p-6 shadow-flat flex flex-col md:flex-row gap-4 justify-center items-center">
+                    <button onclick="submitData()" class="btn-flat bg-accent10 text-white px-8 py-4 rounded-xl font-bold text-xl w-full md:w-auto">
+                        <i class="fa-solid fa-cloud-arrow-up mr-2"></i> 과제 제출 (Firebase)
+                    </button>
+                    <button onclick="copyText('forecast-script')" class="btn-flat bg-text30 text-white px-6 py-4 rounded-xl font-bold w-full md:w-auto">
+                        <i class="fa-regular fa-copy mr-2"></i> 대본 복사
+                    </button>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- ==================== TEACHER DASHBOARD ==================== -->
-    <div id="teacher-dashboard" class="hidden w-full h-full flex font-sans bg-slate-200">
-        <!-- Teacher Sidebar -->
-        <nav class="w-72 border-r-[3px] border-text30 bg-text30 text-white flex flex-col h-full flex-shrink-0 z-10 relative">
-            <div class="p-6 border-b-[3px] border-slate-700 flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-black leading-tight tracking-tighter">
-                        선생님 전용<br>
-                        <span class="text-accent10">관리 대시보드</span>
-                    </h1>
-                </div>
+    <!-- 3. Teacher Dashboard -->
+    <div id="teacher-dashboard" class="hidden h-full w-full flex flex-col overflow-hidden">
+        <header class="bg-white border-b-[3px] border-text30 p-6 flex justify-between items-center shrink-0 shadow-sm z-10 relative">
+            <div>
+                <h1 class="text-3xl font-black">교사용 대시보드</h1>
+                <p class="text-sm font-bold text-accent10">학생 제출 현황 모아보기</p>
             </div>
-            
-            <div class="flex-grow p-4 space-y-2">
-                <div class="w-full text-left p-4 font-bold rounded-lg bg-slate-800 text-white border-[2px] border-slate-600">
-                    <i class="fa-solid fa-inbox mr-2"></i> 학생 제출 현황
-                </div>
-            </div>
-            
-            <div class="p-4 border-t-[3px] border-slate-700 text-center">
-                <button onclick="logout()" class="w-full text-sm font-bold py-2 border-[2px] border-slate-600 rounded-lg hover:bg-slate-700 transition">
-                    <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> 처음으로 로그아웃
+            <div class="flex gap-4">
+                <button onclick="loadSubmissionsToTable()" class="btn-flat bg-bg60 text-text30 px-4 py-2 rounded-lg font-bold border-2">
+                    <i class="fa-solid fa-rotate-right mr-2"></i>새로고침
+                </button>
+                <button onclick="downloadCSV()" class="btn-flat bg-text30 text-bg60 px-4 py-2 rounded-lg font-bold">
+                    <i class="fa-solid fa-download mr-2"></i> CSV 다운로드
+                </button>
+                <button onclick="showConfirmModal()" class="btn-flat bg-red-500 text-white px-4 py-2 rounded-lg font-bold border-text30">
+                    데이터 초기화
+                </button>
+                <button onclick="returnToHome()" class="btn-flat bg-bg60 text-text30 px-4 py-2 rounded-lg font-bold border-2 ml-4">
+                    <i class="fa-solid fa-right-from-bracket mr-2"></i>나가기
                 </button>
             </div>
-        </nav>
+        </header>
 
-        <!-- Teacher Main Area -->
-        <main class="flex-grow bg-bg60 h-full overflow-y-auto relative p-8 md:p-12">
-            <div class="max-w-6xl mx-auto">
-                <div class="flex justify-between items-end mb-8 border-b-[4px] border-text30 pb-4">
-                    <div>
-                        <h2 class="text-4xl font-black mb-2">실시간 과제 수합 현황</h2>
-                        <p class="text-lg font-bold text-accent10">학생들이 제출한 영상 분석 및 예보 대본을 실시간으로 확인합니다.</p>
-                    </div>
-                    <div class="flex gap-3">
-                        <button onclick="clearSubmissions()" class="btn-flat bg-white text-red-600 border-[3px] border-text30 px-4 py-2 rounded-lg font-bold hover:bg-red-50 transition">
-                            <i class="fa-solid fa-trash-can mr-2"></i> 데이터 초기화
-                        </button>
-                        <button onclick="downloadTeacherCSV()" class="btn-flat bg-accent10 text-white border-[3px] border-text30 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition">
-                            <i class="fa-solid fa-file-csv mr-2"></i> 전체 CSV 다운로드
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Data Table -->
-                <div class="bg-white border-[3px] border-text30 rounded-2xl shadow-flat overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-text30 text-white font-bold">
-                                    <th class="p-4 border-b-[3px] border-text30 whitespace-nowrap">학번</th>
-                                    <th class="p-4 border-b-[3px] border-text30 whitespace-nowrap">이름</th>
-                                    <th class="p-4 border-b-[3px] border-text30 min-w-[300px]">영상 분석 기록</th>
-                                    <th class="p-4 border-b-[3px] border-text30 min-w-[400px]">예보 대본 (시나리오)</th>
-                                    <th class="p-4 border-b-[3px] border-text30 whitespace-nowrap">제출 시간</th>
-                                </tr>
-                            </thead>
-                            <tbody id="teacher-table-body" class="divide-y-[2px] divide-slate-200">
-                                <!-- Data injected via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <!-- Empty State -->
-                    <div id="teacher-empty-state" class="hidden flex-col items-center justify-center py-16 text-slate-500">
-                        <i class="fa-solid fa-folder-open text-6xl mb-4 text-slate-300"></i>
-                        <p class="font-bold text-lg">아직 제출된 과제가 없습니다.</p>
-                    </div>
-                </div>
+        <main class="flex-grow p-8 overflow-y-auto bg-bg60 relative">
+            <div class="max-w-7xl mx-auto bg-white border-[3px] border-text30 rounded-2xl shadow-flat overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-text30 text-bg60">
+                        <tr>
+                            <th class="p-4 font-bold w-24 text-center">학번</th>
+                            <th class="p-4 font-bold w-32 text-center">이름</th>
+                            <th class="p-4 font-bold">영상 분석 기록 (STEP 3)</th>
+                            <th class="p-4 font-bold">예보 대본 (STEP 4)</th>
+                            <th class="p-4 font-bold w-40 text-center">제출일시</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teacher-tbody">
+                        <tr>
+                            <td colspan="5" class="py-12 text-center text-slate-500 font-bold">
+                                데이터베이스 연결 및 로딩 중입니다...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </main>
     </div>
 
     <script>
-        // --- 1. Login & Role Management ---
-        function selectRole(role) {
-            if(role === 'student') {
-                document.getElementById('role-selection').classList.add('hidden');
-                document.getElementById('student-dashboard').classList.remove('hidden');
-            } else if(role === 'teacher') {
-                // 선생님 역할 선택 시 바로 넘어가지 않고 비밀번호 모달 띄우기
-                document.getElementById('password-modal').classList.remove('hidden');
-                setTimeout(() => document.getElementById('teacher-password').focus(), 100);
-            }
-        }
+        // ------------------------------------
+        // ★ 파이어베이스 설정 (Firebase Config) ★
+        // 선생님의 Firebase 프로젝트 설정 값을 아래에 덮어쓰세요!
+        // ------------------------------------
+        const firebaseConfig = {
+            apiKey: "선생님의_API_KEY",
+            authDomain: "선생님의_PROJECT_ID.firebaseapp.com",
+            projectId: "선생님의_PROJECT_ID",
+            storageBucket: "선생님의_PROJECT_ID.appspot.com",
+            messagingSenderId: "선생님의_SENDER_ID",
+            appId: "선생님의_APP_ID"
+        };
 
-        function verifyTeacherPassword() {
-            const pwdInput = document.getElementById('teacher-password');
-            const pwd = pwdInput.value;
-            
-            // 비밀번호 인증 (초기설정: 1234)
-            if (pwd === '1234') { 
-                closePasswordModal();
-                document.getElementById('role-selection').classList.add('hidden');
-                document.getElementById('teacher-dashboard').classList.remove('hidden');
-                loadTeacherData(); // 교사 데이터 로드
-            } else {
-                showToast("비밀번호가 일치하지 않습니다.", true);
-                pwdInput.value = '';
-                pwdInput.focus();
-            }
-        }
+        // Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-        function closePasswordModal() {
-            document.getElementById('password-modal').classList.add('hidden');
-            document.getElementById('teacher-password').value = '';
-        }
+        // ------------------------------------
+        // 상태 변수 정의 (이 부분에서 문법 오류가 발생했었습니다)
+        // ------------------------------------
+        const MAX_FRAMES = 28;
+        
+        // 올바른 자바스크립트 객체 구조
+        const uploadedData = {
+            map: new Array(MAX_FRAMES).fill(null),
+            sat: new Array(MAX_FRAMES).fill(null),
+            radar: new Array(MAX_FRAMES).fill(null)
+        };
 
-        function logout() {
-            document.getElementById('student-dashboard').classList.add('hidden');
-            document.getElementById('teacher-dashboard').classList.add('hidden');
-            document.getElementById('role-selection').classList.remove('hidden');
-        }
+        let currentFrame = 0;
+        let isPlaying = false;
+        let playInterval = null;
 
-        // --- 2. Student Dashboard Logic (Tabs, Video, Submit) ---
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('bg-text30', 'text-bg60');
-                btn.classList.add('bg-bg60', 'text-text30');
-            });
-            document.getElementById(tabId).classList.add('active');
-            const activeBtn = document.getElementById('nav-' + tabId);
-            activeBtn.classList.remove('bg-bg60', 'text-text30');
-            activeBtn.classList.add('bg-text30', 'text-bg60');
-            document.querySelector('#student-dashboard main').scrollTop = 0;
-        }
-
+        // ------------------------------------
+        // UI 및 내비게이션 기능
+        // ------------------------------------
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
             toast.innerText = message;
@@ -537,212 +416,259 @@
             
             toast.classList.remove('translate-x-[150%]');
             toast.classList.add('translate-x-0');
+            
             setTimeout(() => {
                 toast.classList.remove('translate-x-0');
                 toast.classList.add('translate-x-[150%]');
             }, 2500);
         }
 
+        // 모달 관리
+        function openLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
+        function closeLoginModal() { 
+            document.getElementById('login-modal').classList.add('hidden'); 
+            document.getElementById('teacher-pw').value = '';
+        }
+        function showConfirmModal() { document.getElementById('confirm-modal').classList.remove('hidden'); }
+        function closeConfirmModal() { document.getElementById('confirm-modal').classList.add('hidden'); }
+
+        function checkTeacherPassword() {
+            const pw = document.getElementById('teacher-pw').value;
+            if (pw === "1234") {
+                closeLoginModal();
+                selectRole('teacher');
+            } else {
+                showToast("비밀번호가 틀렸습니다.", true);
+            }
+        }
+
+        // 역할 선택 및 화면 전환
+        function selectRole(role) {
+            document.getElementById('role-selection').classList.add('hidden');
+            if (role === 'student') {
+                document.getElementById('student-app').classList.remove('hidden');
+            } else if (role === 'teacher') {
+                document.getElementById('teacher-dashboard').classList.remove('hidden');
+                loadSubmissionsToTable(); // 대시보드 진입 시 데이터 로드
+            }
+        }
+
+        function returnToHome() {
+            document.getElementById('student-app').classList.add('hidden');
+            document.getElementById('teacher-dashboard').classList.add('hidden');
+            document.getElementById('role-selection').classList.remove('hidden');
+        }
+
+        // 탭 전환
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-text30', 'text-bg60');
+                btn.classList.add('bg-bg60', 'text-text30');
+            });
+            document.getElementById(tabId).classList.add('active');
+            
+            const activeBtn = document.getElementById('nav-' + tabId);
+            if(activeBtn) {
+                activeBtn.classList.remove('bg-bg60', 'text-text30');
+                activeBtn.classList.add('bg-text30', 'text-bg60');
+            }
+        }
+
         function copyText(elementId) {
             const textArea = document.getElementById(elementId);
-            if(!textArea.value.trim()) return showToast("내용을 먼저 작성해주세요!", true);
+            if(!textArea.value.trim()) {
+                showToast("내용을 먼저 작성해주세요!", true);
+                return;
+            }
             textArea.select();
             document.execCommand('copy');
             window.getSelection().removeAllRanges();
             showToast("성공적으로 복사되었습니다!");
         }
 
-        // Video Player Logic
-        const MAX_FRAMES = 28;
-        const uploadedData = { map: new Array(MAX_FRAMES).fill(null), sat: new Array(MAX_FRAMES).fill(null), radar: new Array(MAX_FRAMES).fill(null) };
-        let currentFrame = 0, isPlaying = false, playInterval;
-
-        function processFiles(inputElement, type) {
-            const files = Array.from(inputElement.files);
-            if (files.length === 0) return;
+        // ------------------------------------
+        // 미디어 플레이어 로직 (파일 업로드 및 재생)
+        // ------------------------------------
+        function processFiles(input, type) {
+            if (!input.files || input.files.length === 0) return;
+            
+            const files = Array.from(input.files);
+            // 파일명 순으로 정렬하여 시간 순서 보장
             files.sort((a, b) => a.name.localeCompare(b.name));
-            
-            let loadedCount = 0;
+
             const limit = Math.min(files.length, MAX_FRAMES);
-            
             for (let i = 0; i < limit; i++) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     uploadedData[type][i] = e.target.result;
-                    loadedCount++;
-                    document.getElementById(`count-${type}`).innerText = `${loadedCount} / 28`;
-                    if (loadedCount === limit) {
-                        const names = { map: '일기도', sat: '위성 영상', radar: '레이더 영상' };
-                        showToast(`${names[type]} ${loadedCount}장 업로드 완료!`);
-                        updateViewerFrames();
+                    // 첫 이미지는 즉시 뷰어에 표시
+                    if (i === 0 && currentFrame === 0) {
+                        seekFrame(0); 
                     }
                 };
                 reader.readAsDataURL(files[i]);
             }
+            
+            document.getElementById(`count-${type}`).innerText = `${limit} / ${MAX_FRAMES}`;
+            showToast(`${type} 자료 ${limit}장이 업로드되었습니다.`);
         }
 
         function togglePlay() {
-            isPlaying = !isPlaying;
             const btn = document.getElementById('play-btn');
             if (isPlaying) {
-                btn.innerHTML = `<i class="fa-solid fa-pause mr-2"></i> 일시정지`;
-                btn.classList.replace('bg-accent10', 'bg-red-500');
-                playInterval = setInterval(nextFrame, 600);
-            } else {
-                btn.innerHTML = `<i class="fa-solid fa-play mr-2"></i> 재생`;
-                btn.classList.replace('bg-red-500', 'bg-accent10');
                 clearInterval(playInterval);
+                btn.innerHTML = '<i class="fa-solid fa-play mr-2"></i> 재생';
+                isPlaying = false;
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-pause mr-2"></i> 일시정지';
+                isPlaying = true;
+                playInterval = setInterval(() => {
+                    currentFrame++;
+                    if (currentFrame >= MAX_FRAMES) currentFrame = 0;
+                    document.getElementById('timeline-slider').value = currentFrame;
+                    seekFrame(currentFrame);
+                }, 500); // 0.5초 간격으로 프레임 이동
             }
         }
 
-        function nextFrame() {
-            currentFrame = (currentFrame + 1) % MAX_FRAMES;
-            document.getElementById('timeline-slider').value = currentFrame;
-            updateViewerFrames();
-        }
-
-        function seekFrame(val) {
-            currentFrame = parseInt(val);
-            updateViewerFrames();
-        }
-
-        function updateViewerFrames() {
+        function seekFrame(index) {
+            currentFrame = parseInt(index);
+            const placeholder = 'https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image';
+            
+            document.getElementById('viewer-map').src = uploadedData.map[currentFrame] || placeholder;
+            document.getElementById('viewer-sat').src = uploadedData.sat[currentFrame] || placeholder;
+            document.getElementById('viewer-radar').src = uploadedData.radar[currentFrame] || placeholder;
+            
+            // 12시간 간격 타이머 계산 로직
             const day = Math.floor(currentFrame / 2) + 1;
-            const hour = (currentFrame % 2 === 0) ? "00:00" : "12:00";
+            const hour = (currentFrame % 2) === 0 ? "00:00" : "12:00";
             document.getElementById('time-display').innerText = `${day}일차 ${hour}`;
-
-            ['map', 'sat', 'radar'].forEach(type => {
-                const imgEl = document.getElementById(`viewer-${type}`);
-                imgEl.src = uploadedData[type][currentFrame] || `https://placehold.co/400x300/F8FAFC/0F172A?text=No+Data+(${currentFrame + 1}/28)`;
-            });
         }
+
+        // ------------------------------------
+        // Firebase 데이터 관리 로직
+        // ------------------------------------
         
-        window.addEventListener('DOMContentLoaded', () => {
-            updateViewerFrames();
-            // 비밀번호 입력 창에서 Enter 키 누를 때 바로 확인되도록 이벤트 추가
-            const pwdInput = document.getElementById('teacher-password');
-            if(pwdInput) {
-                pwdInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') verifyTeacherPassword();
-                });
-            }
-        });
-
-        // --- 3. Data Submission & Storage (Local Storage Simulation) ---
-        function getSubmissions() {
-            return JSON.parse(localStorage.getItem('weather_submissions') || '[]');
-        }
-
-        function submitToSpreadsheet() {
+        // 1. 학생 데이터 제출
+        async function submitData() {
             const id = document.getElementById('student-id').value.trim();
             const name = document.getElementById('student-name').value.trim();
-            const analysis = document.getElementById('video-analysis').value.trim();
+            const analysis = document.getElementById('analysis-script').value.trim();
             const script = document.getElementById('forecast-script').value.trim();
 
-            if (!id || !name || !script) return showToast("학번, 이름, 대본을 모두 작성해주세요!", true);
+            if (!id || !name || !analysis || !script) {
+                showToast("학번, 이름, 영상 분석 기록, 예보 대본을 모두 작성해주세요!", true);
+                return;
+            }
 
-            const newSubmission = {
+            const submissionData = {
                 id: id,
                 name: name,
                 analysis: analysis,
                 script: script,
-                time: new Date().toLocaleString('ko-KR')
+                timestamp: new Date().getTime()
             };
 
-            const data = getSubmissions();
-            data.push(newSubmission);
-            localStorage.setItem('weather_submissions', JSON.stringify(data));
-            
-            showToast("선생님께 성공적으로 제출되었습니다!");
-        }
-
-        function downloadCSV() {
-            // 학생 개별 다운로드
-            const id = document.getElementById('student-id').value.trim();
-            const name = document.getElementById('student-name').value.trim();
-            if (!id || !name) return showToast("학번과 이름을 입력해주세요.", true);
-            
-            const analysis = `"${document.getElementById('video-analysis').value.trim().replace(/"/g, '""')}"`;
-            const script = `"${document.getElementById('forecast-script').value.trim().replace(/"/g, '""')}"`;
-            
-            exportCSV([`학번,이름,영상분석,예보대본\n${id},${name},${analysis},${script}`], `${id}_${name}_기상예보.csv`);
-        }
-
-        // --- 4. Teacher Dashboard Logic ---
-        function loadTeacherData() {
-            const data = getSubmissions();
-            const tbody = document.getElementById('teacher-table-body');
-            const emptyState = document.getElementById('teacher-empty-state');
-            
-            tbody.innerHTML = ''; // 초기화
-            
-            if(data.length === 0) {
-                emptyState.style.display = 'flex';
-            } else {
-                emptyState.style.display = 'none';
-                // 최신 제출이 위로 오도록 역순으로 렌더링
-                data.slice().reverse().forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-50 transition-colors";
-                    tr.innerHTML = `
-                        <td class="p-4 font-bold text-accent10 whitespace-nowrap">${escapeHTML(row.id)}</td>
-                        <td class="p-4 font-bold whitespace-nowrap">${escapeHTML(row.name)}</td>
-                        <td class="p-4 text-sm whitespace-pre-wrap leading-relaxed">${escapeHTML(row.analysis)}</td>
-                        <td class="p-4 text-sm whitespace-pre-wrap leading-relaxed">${escapeHTML(row.script)}</td>
-                        <td class="p-4 text-xs font-bold text-slate-500 whitespace-nowrap">${row.time}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+            try {
+                // "weather_reports" 컬렉션에 데이터 추가
+                await db.collection("weather_reports").add(submissionData);
+                showToast("선생님께 성공적으로 전송되었습니다!");
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showToast("데이터 전송 중 오류가 발생했습니다. 파이어베이스 설정을 확인하세요.", true);
             }
         }
 
-        function downloadTeacherCSV() {
-            const data = getSubmissions();
-            if(data.length === 0) return showToast("다운로드할 데이터가 없습니다.", true);
+        // 2. 교사용 대시보드 데이터 불러오기
+        async function loadSubmissionsToTable() {
+            const tbody = document.getElementById('teacher-tbody');
+            tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500 font-bold">데이터를 불러오는 중입니다...</td></tr>';
+            
+            try {
+                // 시간순 내림차순 정렬
+                const snapshot = await db.collection("weather_reports").orderBy("timestamp", "desc").get();
+                
+                if (snapshot.empty) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 font-bold">제출된 데이터가 없습니다.</td></tr>`;
+                    return;
+                }
 
-            let csvContent = "학번,이름,영상분석,예보대본,제출시간\n";
-            data.forEach(row => {
-                const safeAnalysis = `"${(row.analysis || '').replace(/"/g, '""')}"`;
-                const safeScript = `"${(row.script || '').replace(/"/g, '""')}"`;
-                csvContent += `${row.id},${row.name},${safeAnalysis},${safeScript},${row.time}\n`;
-            });
+                tbody.innerHTML = ''; 
+                snapshot.forEach((doc) => {
+                    const s = doc.data();
+                    const dateStr = new Date(s.timestamp).toLocaleString('ko-KR');
 
-            exportCSV([csvContent], `전체학생_기상예보_제출현황.csv`);
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b-[2px] border-slate-200 hover:bg-slate-50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="p-4 text-center font-bold text-accent10">${s.id}</td>
+                        <td class="p-4 text-center font-bold">${s.name}</td>
+                        <td class="p-4 text-sm text-slate-600"><div class="max-h-20 overflow-y-auto whitespace-pre-wrap">${s.analysis}</div></td>
+                        <td class="p-4 text-sm font-medium"><div class="max-h-20 overflow-y-auto whitespace-pre-wrap">${s.script}</div></td>
+                        <td class="p-4 text-center text-xs text-slate-400 font-bold">${dateStr}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error("Error getting documents: ", error);
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-red-500 font-bold">데이터를 불러오는 중 오류가 발생했습니다. 파이어베이스 설정을 확인하세요.</td></tr>`;
+            }
         }
 
-        function clearSubmissions() {
-            // 브라우저 기본 confirm 대신 커스텀 모달 띄우기
-            document.getElementById('confirm-modal').classList.remove('hidden');
-        }
-
-        function closeConfirmModal() {
-            document.getElementById('confirm-modal').classList.add('hidden');
-        }
-
-        function executeClearSubmissions() {
-            localStorage.removeItem('weather_submissions');
-            loadTeacherData();
+        // 3. 전체 데이터 삭제
+        async function clearAllData() {
             closeConfirmModal();
-            showToast("모든 데이터가 삭제되었습니다.");
+            try {
+                const snapshot = await db.collection("weather_reports").get();
+                const batch = db.batch();
+                snapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                showToast("모든 학생 데이터가 삭제되었습니다.");
+                loadSubmissionsToTable(); // 테이블 갱신
+            } catch (error) {
+                console.error("Error deleting documents: ", error);
+                showToast("데이터 삭제 중 오류가 발생했습니다.", true);
+            }
         }
 
-        // Helper functions
-        function exportCSV(contentArray, filename) {
-            const BOM = "\uFEFF"; // 한글 깨짐 방지
-            const blob = new Blob([BOM + contentArray.join('')], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        // 4. CSV 다운로드
+        async function downloadCSV() {
+            try {
+                const snapshot = await db.collection("weather_reports").orderBy("timestamp", "desc").get();
+                if (snapshot.empty) {
+                    showToast("다운로드할 데이터가 없습니다.", true);
+                    return;
+                }
 
-        function escapeHTML(str) {
-            if(!str) return '';
-            return str.replace(/[&<>'"]/g, tag => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-            }[tag]));
+                const BOM = "\uFEFF";
+                let csvContent = BOM + "제출일시,학번,이름,영상분석기록,예보대본\n";
+
+                snapshot.forEach((doc) => {
+                    const s = doc.data();
+                    const dateStr = new Date(s.timestamp).toLocaleString('ko-KR');
+                    const safeAnalysis = `"${s.analysis.replace(/"/g, '""')}"`;
+                    const safeScript = `"${s.script.replace(/"/g, '""')}"`;
+                    csvContent += `${dateStr},${s.id},${s.name},${safeAnalysis},${safeScript}\n`;
+                });
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `기상예보_제출현황_${new Date().getTime()}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast("CSV 파일이 다운로드 되었습니다.");
+            } catch (error) {
+                console.error("CSV Download Error: ", error);
+                showToast("다운로드 중 오류가 발생했습니다.", true);
+            }
         }
     </script>
 </body>
