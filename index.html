@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI·디지털 기상 예보관 프로젝트</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Tailwind CSS with Custom Config for 60-30-10 Rule -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                    },
+                    colors: {
+                        bg60: '#F8FAFC',    /* 60% 배경: 매우 밝은 슬레이트 */
+                        text30: '#0F172A',  /* 30% 텍스트/테두리: 아주 어두운 슬레이트 */
+                        accent10: '#2563EB',/* 10% 포인트: 선명한 파란색 */
+                    },
+                    boxShadow: {
+                        'flat': '4px 4px 0px 0px #0F172A',
+                        'flat-hover': '2px 2px 0px 0px #0F172A',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8FAFC; color: #0F172A; }
+        
+        /* Custom Scrollbar for minimalistic look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #F8FAFC; }
+        ::-webkit-scrollbar-thumb { background: #0F172A; border-radius: 4px; }
+        
+        /* Utility classes for flat design */
+        .border-flat { border: 3px solid #0F172A; }
+        .btn-flat {
+            border: 3px solid #0F172A;
+            transition: all 0.2s ease;
+        }
+        .btn-flat:active {
+            transform: translate(2px, 2px);
+            box-shadow: none !important;
+        }
+        
+        /* Tab hiding logic */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex overflow-hidden font-sans">
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-72 border-r-[3px] border-text30 bg-bg60 flex flex-col h-full flex-shrink-0 z-10 relative">
+        <div class="p-6 border-b-[3px] border-text30">
+            <h1 class="text-2xl font-black leading-tight tracking-tighter">
+                기상 예보관<br>
+                <span class="text-accent10">프로젝트 대시보드</span>
+            </h1>
+            <p class="text-sm font-bold mt-2">지구과학 I</p>
+        </div>
+        
+        <div class="flex-grow p-4 space-y-2 overflow-y-auto">
+            <!-- Navigation Buttons -->
+            <button onclick="switchTab('tab-home')" id="nav-tab-home" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-text30 text-bg60 transition-colors nav-btn">
+                <i class="fa-solid fa-house mr-2"></i> 프로젝트 홈
+            </button>
+            <button onclick="switchTab('tab-step1')" id="nav-tab-step1" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
+                <i class="fa-solid fa-video mr-2"></i> STEP 1. 도입 (예습)
+            </button>
+            <button onclick="switchTab('tab-step2')" id="nav-tab-step2" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
+                <i class="fa-solid fa-cloud-sun-rain mr-2"></i> STEP 2. 기상 자료 수집
+            </button>
+            <button onclick="switchTab('tab-step3')" id="nav-tab-step3" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
+                <i class="fa-solid fa-film mr-2 text-accent10"></i> STEP 3. 통합 영상 분석
+            </button>
+            <button onclick="switchTab('tab-step4')" id="nav-tab-step4" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
+                <i class="fa-solid fa-pen-to-square mr-2"></i> STEP 4. 날씨 분석
+            </button>
+            <button onclick="switchTab('tab-step5')" id="nav-tab-step5" class="w-full text-left p-4 font-bold rounded-lg border-flat bg-bg60 text-text30 hover:bg-slate-200 transition-colors nav-btn">
+                <i class="fa-solid fa-share-nodes mr-2"></i> STEP 5. 제출 및 공유
+            </button>
+        </div>
+        
+        <div class="p-4 border-t-[3px] border-text30 text-center">
+            <p class="text-xs font-bold">권혜정 선생님의 지구과학 수업</p>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow bg-bg60 h-full overflow-y-auto relative p-8 md:p-12">
+        
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed top-5 right-5 bg-accent10 text-bg60 px-6 py-3 rounded-xl border-[3px] border-text30 font-bold shadow-flat transform transition-transform translate-x-[150%] z-50">
+            복사되었습니다!
+        </div>
+
+        <!-- 0. Home Tab -->
+        <div id="tab-home" class="tab-content active max-w-4xl mx-auto">
+            <div class="inline-block px-4 py-1 border-[3px] border-text30 rounded-full text-accent10 font-bold mb-6">
+                고등학교 2학년 1학기
+            </div>
+            <h2 class="text-5xl font-black mb-8 border-b-[4px] border-text30 pb-4">기압계의 이동에 따른 날씨 분석</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                <div class="border-[3px] border-text30 p-8 rounded-2xl bg-white shadow-flat">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fa-solid fa-bullseye text-accent10 text-3xl mr-3"></i> 성취 기준
+                    </h3>
+                    <p class="text-lg font-medium leading-relaxed">
+                        중위도 저기압과 고기압이 통과할 때 날씨의 변화를 일기도, 위성 영상, 레이더 영상을 종합하여 예측할 수 있다.
+                    </p>
+                </div>
+                
+                <div class="border-[3px] border-accent10 p-8 rounded-2xl bg-white shadow-flat">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center text-accent10">
+                        <i class="fa-solid fa-circle-question text-3xl mr-3"></i> 탐구 질문
+                    </h3>
+                    <p class="text-lg font-medium leading-relaxed">
+                        일기도, 위성 영상, 레이더 영상을 분석하여 중위도 저기압과 고기압이 통과할 때 날씨 변화를 이해할 수 있을까?
+                    </p>
+                </div>
+            </div>
+            
+            <div class="mt-12 p-6 border-[3px] border-text30 rounded-2xl bg-text30 text-bg60 flex items-center justify-between">
+                <div>
+                    <h4 class="text-xl font-bold mb-1">학습을 시작할 준비가 되었나요?</h4>
+                    <p class="text-sm">왼쪽 메뉴의 STEP 1부터 차례대로 진행해주세요.</p>
+                </div>
+                <button onclick="switchTab('tab-step1')" class="bg-accent10 text-white px-6 py-3 rounded-xl font-bold border-[3px] border-bg60 hover:bg-blue-700 transition">
+                    시작하기 <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 1. STEP 1 Tab -->
+        <div id="tab-step1" class="tab-content max-w-4xl mx-auto">
+            <h2 class="text-4xl font-black mb-2">도입: 기상 예보 활동 예습</h2>
+            <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">매일의 날씨 예보는 어떻게 달라질까요?</p>
+            
+            <div class="border-[3px] border-text30 rounded-2xl overflow-hidden shadow-flat bg-white mb-8">
+                <div class="bg-text30 text-bg60 px-4 py-2 font-bold flex items-center">
+                    <i class="fa-solid fa-play mr-2"></i> 오늘의 기상 예보 영상
+                </div>
+                <div class="aspect-video w-full bg-slate-200 flex flex-col items-center justify-center relative">
+                    <!-- Placeholder for Teacher's Video -->
+                    <i class="fa-brands fa-youtube text-6xl text-text30 mb-4"></i>
+                    <p class="font-bold text-lg">선생님이 보여주시는 동영상을 시청하세요.</p>
+                    <p class="text-sm text-slate-500 mt-2">(기상청 누리집 또는 뉴스 기상예보)</p>
+                </div>
+            </div>
+            
+            <div class="border-[3px] border-text30 p-6 rounded-2xl bg-white shadow-flat border-l-8 border-l-accent10">
+                <h3 class="font-bold text-xl mb-2"><i class="fa-solid fa-lightbulb text-accent10 mr-2"></i> 생각해보기</h3>
+                <p class="font-medium text-lg">예보관들은 내일의 날씨를 맞추기 위해 어떤 자료들을 분석하고 있을까요?</p>
+            </div>
+        </div>
+
+        <!-- 2. STEP 2 Tab -->
+        <div id="tab-step2" class="tab-content max-w-4xl mx-auto">
+            <h2 class="text-4xl font-black mb-2">자료 수집: 기상 빅데이터 모으기</h2>
+            <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">14일간 12시간 간격(총 28장)의 자료를 캡처하여 각 항목에 업로드하세요. (파일명을 날짜순으로 정렬 권장)</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- 일기도 Upload -->
+                <label class="cursor-pointer group relative block">
+                    <input type="file" multiple accept="image/*" class="hidden" onchange="processFiles(this, 'map')">
+                    <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 transition-colors flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-map-location-dot text-5xl text-accent10 mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">일기도 업로드</h3>
+                        <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장의 이미지를 선택하세요</p>
+                        <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1">
+                            <span id="count-map" class="font-black text-accent10">0 / 28</span>
+                        </div>
+                    </div>
+                </label>
+                
+                <!-- 위성 영상 Upload -->
+                <label class="cursor-pointer group relative block">
+                    <input type="file" multiple accept="image/*" class="hidden" onchange="processFiles(this, 'sat')">
+                    <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 transition-colors flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-satellite text-5xl text-accent10 mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">위성 영상 업로드</h3>
+                        <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장의 이미지를 선택하세요</p>
+                        <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1">
+                            <span id="count-sat" class="font-black text-accent10">0 / 28</span>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- 레이더 영상 Upload -->
+                <label class="cursor-pointer group relative block">
+                    <input type="file" multiple accept="image/*" class="hidden" onchange="processFiles(this, 'radar')">
+                    <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 transition-colors flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-satellite-dish text-5xl text-accent10 mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">레이더 영상 업로드</h3>
+                        <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장의 이미지를 선택하세요</p>
+                        <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1">
+                            <span id="count-radar" class="font-black text-accent10">0 / 28</span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+            
+            <div class="text-center mt-8">
+                <a href="https://www.weather.go.kr" target="_blank" class="inline-block btn-flat shadow-flat bg-text30 text-bg60 px-8 py-4 rounded-xl font-bold text-lg hover:bg-slate-800">
+                    <i class="fa-solid fa-arrow-up-right-from-square mr-2"></i> 기상청 날씨누리 접속하기
+                </a>
+            </div>
+        </div>
+
+        <!-- 3. STEP 3 Tab -->
+        <div id="tab-step3" class="tab-content max-w-5xl mx-auto">
+            <div class="flex justify-between items-end mb-2">
+                <h2 class="text-4xl font-black">통합 영상 포트폴리오</h2>
+            </div>
+            <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">업로드한 3가지 기상 자료를 동시에 재생하여 날씨 변화를 입체적으로 분석하세요.</p>
+            
+            <div class="bg-white border-[3px] border-text30 rounded-2xl p-6 shadow-flat mb-8">
+                <!-- Player Controls -->
+                <div class="flex flex-col md:flex-row items-center justify-between mb-6 border-b-[3px] border-text30 pb-6 gap-4">
+                    <button id="play-btn" onclick="togglePlay()" class="btn-flat bg-accent10 text-white px-8 py-3 rounded-xl font-black text-lg w-full md:w-auto shrink-0 flex justify-center items-center">
+                        <i class="fa-solid fa-play mr-2"></i> 재생
+                    </button>
+                    
+                    <div class="flex-grow w-full flex items-center bg-bg60 p-3 rounded-xl border-[2px] border-text30">
+                        <div id="time-display" class="font-black text-xl w-32 shrink-0 text-center text-text30">1일차 00:00</div>
+                        <input type="range" id="timeline-slider" min="0" max="27" value="0" class="w-full h-4 bg-white border-[2px] border-text30 rounded-lg appearance-none cursor-pointer mx-4 accent-[#2563EB]" oninput="seekFrame(this.value)">
+                    </div>
+                </div>
+                
+                <!-- 3-Way Video Viewer -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="border-[3px] border-text30 rounded-xl overflow-hidden bg-bg60 flex flex-col">
+                        <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg border-b-[3px] border-text30">일기도</div>
+                        <div class="relative w-full aspect-[4/3]">
+                            <img id="viewer-map" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white">
+                        </div>
+                    </div>
+                    <div class="border-[3px] border-text30 rounded-xl overflow-hidden bg-bg60 flex flex-col">
+                        <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg border-b-[3px] border-text30">위성 영상</div>
+                        <div class="relative w-full aspect-[4/3]">
+                            <img id="viewer-sat" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white">
+                        </div>
+                    </div>
+                    <div class="border-[3px] border-text30 rounded-xl overflow-hidden bg-bg60 flex flex-col">
+                        <div class="bg-text30 text-bg60 font-black text-center py-2 text-lg border-b-[3px] border-text30">레이더 영상</div>
+                        <div class="relative w-full aspect-[4/3]">
+                            <img id="viewer-radar" src="https://placehold.co/400x300/F8FAFC/0F172A?text=No+Image" class="absolute inset-0 w-full h-full object-contain bg-white">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white border-[3px] border-text30 rounded-2xl p-8 shadow-flat mb-8">
+                <div class="flex justify-between items-end mb-4">
+                    <h3 class="text-2xl font-bold"><i class="fa-solid fa-robot mr-2 text-accent10"></i> AI 프롬프트 기록장</h3>
+                    <a href="https://www.canva.com" target="_blank" class="btn-flat bg-accent10 text-white px-4 py-2 rounded-lg font-bold shadow-flat text-sm">
+                        Canva 열기 <i class="fa-solid fa-external-link-alt ml-1"></i>
+                    </a>
+                </div>
+                <div class="bg-bg60 p-4 rounded-xl border-[2px] border-text30 mb-6">
+                    <p class="text-sm font-bold text-red-600 mb-1"><i class="fa-solid fa-triangle-exclamation"></i> 필수 제출 사항</p>
+                    <p class="text-sm font-medium">포트폴리오 제작 시 인공지능에게 입력한 질문(프롬프트)과 답변 내용을 아래에 기록하세요. 작성 후 복사하여 최종 산출물과 함께 패들렛에 제출해야 합니다.</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block font-bold mb-2">내가 입력한 AI 프롬프트 (질문):</label>
+                        <textarea id="ai-prompt" class="w-full h-32 p-4 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-medium resize-none" placeholder="예: 중위도 저기압이 통과할 때 비가 내리는 구름의 형태를 그려줘."></textarea>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="copyText('ai-prompt')" class="btn-flat bg-text30 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-800">
+                            <i class="fa-regular fa-copy mr-2"></i> 프롬프트 복사하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. STEP 4 Tab -->
+        <div id="tab-step4" class="tab-content max-w-4xl mx-auto">
+            <h2 class="text-4xl font-black mb-2">날씨 분석: 나도 기상 예보관!</h2>
+            <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">수집한 자료를 종합하여 시나리오를 작성하세요.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="col-span-1 border-[3px] border-text30 rounded-2xl p-6 bg-white shadow-flat h-fit">
+                    <h3 class="font-bold text-xl mb-4 border-b-[2px] border-text30 pb-2">분석 포인트</h3>
+                    <ul class="space-y-3 font-medium text-sm">
+                        <li><i class="fa-solid fa-check text-accent10 mr-2"></i> 중위도 저기압/고기압 위치 파악</li>
+                        <li><i class="fa-solid fa-check text-accent10 mr-2"></i> 기압계 이동 방향 확인</li>
+                        <li><i class="fa-solid fa-check text-accent10 mr-2"></i> 전선에 따른 기상 요소 변화</li>
+                        <li><i class="fa-solid fa-check text-accent10 mr-2"></i> 종관 규모 / 중규모 구분</li>
+                    </ul>
+                </div>
+                
+                <div class="col-span-2 border-[3px] border-text30 rounded-2xl p-6 bg-white shadow-flat">
+                    <h3 class="font-bold text-xl mb-4"><i class="fa-solid fa-microphone-lines text-accent10 mr-2"></i> 예보관 브리핑 대본 작성</h3>
+                    <textarea id="forecast-script" class="w-full h-64 p-4 border-[3px] border-text30 rounded-xl bg-bg60 focus:outline-none focus:border-accent10 font-medium resize-none leading-relaxed" placeholder="시청자 여러분 안녕하십니까. 오늘의 날씨입니다. 
+현재 우리나라 서쪽에서 다가오는 중위도 저기압의 영향으로... 
+(일기도, 위성, 레이더 영상 분석 결과를 포함하여 작성하세요)"></textarea>
+                    
+                    <div class="flex justify-end mt-4">
+                        <button onclick="copyText('forecast-script')" class="btn-flat bg-text30 text-white px-6 py-2 rounded-lg font-bold hover:bg-slate-800">
+                            <i class="fa-regular fa-copy mr-2"></i> 대본 복사하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. STEP 5 Tab -->
+        <div id="tab-step5" class="tab-content max-w-4xl mx-auto">
+            <h2 class="text-4xl font-black mb-2">산출물 제출 및 공유</h2>
+            <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">과정 중심 평가를 위해 모든 자료를 패들렛에 제출합니다.</p>
+            
+            <div class="bg-white border-[3px] border-text30 rounded-2xl p-8 shadow-flat text-center">
+                <i class="fa-solid fa-paper-plane text-6xl text-accent10 mb-6"></i>
+                <h3 class="text-2xl font-bold mb-4">제출물 최종 체크리스트</h3>
+                
+                <div class="inline-block text-left mb-8 space-y-3 font-medium text-lg">
+                    <p><i class="fa-regular fa-square-check text-accent10 mr-2"></i> 1. 완성된 캔바 영상 포트폴리오 링크</p>
+                    <p><i class="fa-regular fa-square-check text-accent10 mr-2"></i> 2. 한글 파일 (AI 프롬프트 기록 복사본)</p>
+                    <p><i class="fa-regular fa-square-check text-accent10 mr-2"></i> 3. 예보관 브리핑 대본</p>
+                </div>
+                
+                <div class="border-t-[3px] border-dashed border-text30 pt-8 mt-4">
+                    <p class="font-bold mb-4">아래 버튼을 눌러 선생님이 공유해주신 패들렛으로 이동하세요.</p>
+                    <a href="#" class="inline-block btn-flat shadow-flat bg-accent10 text-white px-10 py-4 rounded-xl font-bold text-xl hover:bg-blue-700 transition-transform">
+                        <i class="fa-solid fa-chalkboard-user mr-2"></i> 학급 패들렛으로 이동
+                    </a>
+                    <p class="text-xs font-bold text-slate-500 mt-4">* 실제 수업에서는 선생님이 제공한 URL로 연결됩니다.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Tab switching logic
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Reset all nav buttons styling
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-text30', 'text-bg60');
+                btn.classList.add('bg-bg60', 'text-text30');
+            });
+            
+            // Show target tab
+            document.getElementById(tabId).classList.add('active');
+            
+            // Highlight active nav button
+            const activeBtn = document.getElementById('nav-' + tabId);
+            activeBtn.classList.remove('bg-bg60', 'text-text30');
+            activeBtn.classList.add('bg-text30', 'text-bg60');
+            
+            // Scroll to top
+            document.querySelector('main').scrollTop = 0;
+        }
+
+        // Copy text to clipboard using modern API with fallback
+        function copyText(elementId) {
+            const textArea = document.getElementById(elementId);
+            const textToCopy = textArea.value;
+            
+            if(!textToCopy.trim()) {
+                showToast("내용을 먼저 작성해주세요!", true);
+                return;
+            }
+
+            // Fallback for older browsers or iframe restrictions
+            textArea.select();
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            showToast("성공적으로 복사되었습니다!");
+        }
+
+        // Toast notification logic
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            
+            if(isError) {
+                toast.classList.replace('bg-accent10', 'bg-red-500');
+            } else {
+                toast.classList.replace('bg-red-500', 'bg-accent10');
+            }
+            
+            // Slide in
+            toast.classList.remove('translate-x-[150%]');
+            toast.classList.add('translate-x-0');
+            
+            // Slide out after 2.5 seconds
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0');
+                toast.classList.add('translate-x-[150%]');
+            }, 2500);
+        }
+
+        const MAX_FRAMES = 28;
+        const uploadedData = {
+            map: new Array(MAX_FRAMES).fill(null),
+            sat: new Array(MAX_FRAMES).fill(null),
+            radar: new Array(MAX_FRAMES).fill(null)
+        };
+
+        let currentFrame = 0;
+        let isPlaying = false;
+        let playInterval;
+
+        // 파일 업로드 처리 함수 (멀티 파일 지원 및 정렬)
+        function processFiles(inputElement, type) {
+            const files = Array.from(inputElement.files);
+            if (files.length === 0) return;
+            
+            // 파일명을 기준으로 오름차순 정렬 (시간 순서 보장)
+            files.sort((a, b) => a.name.localeCompare(b.name));
+            
+            let loadedCount = 0;
+            const limit = Math.min(files.length, MAX_FRAMES);
+            
+            for (let i = 0; i < limit; i++) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedData[type][i] = e.target.result;
+                    loadedCount++;
+                    document.getElementById(`count-${type}`).innerText = `${loadedCount} / 28`;
+                    
+                    // 정해진 프레임만큼 다 로드되면 뷰어 갱신
+                    if (loadedCount === limit) {
+                        const typeNames = { map: '일기도', sat: '위성 영상', radar: '레이더 영상' };
+                        showToast(`${typeNames[type]} 자료 ${loadedCount}장 업로드 완료!`);
+                        updateViewerFrames();
+                    }
+                };
+                reader.readAsDataURL(files[i]);
+            }
+        }
+
+        // 재생/일시정지 토글 함수
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('play-btn');
+            
+            if (isPlaying) {
+                btn.innerHTML = `<i class="fa-solid fa-pause mr-2"></i> 일시정지`;
+                btn.classList.replace('bg-accent10', 'bg-red-500');
+                playInterval = setInterval(nextFrame, 600); // 0.6초마다 다음 프레임
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-play mr-2"></i> 재생`;
+                btn.classList.replace('bg-red-500', 'bg-accent10');
+                clearInterval(playInterval);
+            }
+        }
+
+        // 다음 프레임으로 자동 이동
+        function nextFrame() {
+            currentFrame++;
+            if (currentFrame >= MAX_FRAMES) {
+                currentFrame = 0; // 끝까지 가면 처음으로 루프
+            }
+            document.getElementById('timeline-slider').value = currentFrame;
+            updateViewerFrames();
+        }
+
+        // 사용자가 슬라이더 조작 시 수동 프레임 이동
+        function seekFrame(val) {
+            currentFrame = parseInt(val);
+            updateViewerFrames();
+        }
+
+        // 현재 프레임에 맞춰 시간 및 3면 뷰어 화면 업데이트
+        function updateViewerFrames() {
+            // 시간 디스플레이 업데이트 (12시간 간격: 00시, 12시)
+            const day = Math.floor(currentFrame / 2) + 1;
+            const hour = (currentFrame % 2 === 0) ? "00:00" : "12:00";
+            document.getElementById('time-display').innerText = `${day}일차 ${hour}`;
+
+            // 3가지 뷰어 이미지 업데이트
+            const types = ['map', 'sat', 'radar'];
+            types.forEach(type => {
+                const imgEl = document.getElementById(`viewer-${type}`);
+                if (uploadedData[type][currentFrame]) {
+                    imgEl.src = uploadedData[type][currentFrame];
+                } else {
+                    // 데이터가 없는 경우 플레이스홀더 표시
+                    imgEl.src = `https://placehold.co/400x300/F8FAFC/0F172A?text=No+Data+(${currentFrame + 1}/28)`;
+                }
+            });
+        }
+        
+        // 브라우저 로드 시 초기 뷰어 빈 화면 렌더링
+        window.addEventListener('DOMContentLoaded', () => {
+            updateViewerFrames();
+        });
+    </script>
+</body>
+</html>
