@@ -113,7 +113,7 @@
                 기상 예보관<br>
                 <span class="text-accent10">프로젝트</span>
             </h1>
-            <p class="text-xl font-bold text-slate-500">지구과학 I - 권혜정 선생님</p>
+            <p class="text-xl font-bold text-slate-500">지구과학 - 권혜정 선생님</p>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl w-full">
@@ -201,9 +201,25 @@
                     <div class="bg-text30 text-bg60 px-4 py-2 font-bold flex items-center">
                         <i class="fa-solid fa-play mr-2"></i> 오늘의 기상 예보 영상
                     </div>
-                    <div class="aspect-video w-full bg-slate-200 flex flex-col items-center justify-center relative">
-                        <i class="fa-brands fa-youtube text-6xl text-text30 mb-4"></i>
-                        <p class="font-bold text-lg">선생님이 보여주시는 동영상을 시청하세요.</p>
+                    <div class="aspect-video w-full bg-slate-200 flex flex-col items-center justify-center relative overflow-hidden">
+                        <!-- 방송사 보안 정책으로 iframe이 막힐 경우를 대비한 배경 안내 버튼 -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center z-0 bg-slate-100">
+                            <i class="fa-solid fa-tv text-4xl text-slate-400 mb-4"></i>
+                            <p class="text-slate-500 font-bold mb-4 text-center">방송사 사이트 보안 정책으로 화면이 바로 나오지 않는다면<br>아래 버튼을 눌러주세요.</p>
+                            <a href="https://imnews.imbc.com/replay/2026/nwdesk/article/6808234_37004.html" target="_blank" class="btn-flat bg-accent10 text-white px-6 py-3 rounded-xl font-bold">
+                                새 창에서 MBC 뉴스 보기 <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i>
+                            </a>
+                        </div>
+                        
+                        <!-- 뉴스 웹페이지 삽입 -->
+                        <iframe 
+                            class="absolute top-0 left-0 w-full h-full z-10 bg-transparent"
+                            src="https://imnews.imbc.com/replay/2026/nwdesk/article/6808234_37004.html" 
+                            title="MBC 기상 예보 영상" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen>
+                        </iframe>
                     </div>
                 </div>
             </div>
@@ -211,7 +227,7 @@
             <!-- STEP 2 Tab -->
             <div id="tab-step2" class="tab-content max-w-4xl mx-auto">
                 <h2 class="text-4xl font-black mb-2">자료 수집: 기상 빅데이터 모으기</h2>
-                <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">14일간 12시간 간격(총 28장)의 자료를 캡처하여 각 항목에 업로드하세요.</p>
+                <p class="text-lg font-bold text-accent10 mb-8 border-b-[3px] border-text30 pb-4">7일간 12시간 간격(총 14장)의 자료를 캡처하여 각 항목에 업로드하세요.</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <!-- 일기도 -->
@@ -220,8 +236,8 @@
                         <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 flex flex-col items-center text-center">
                             <i class="fa-solid fa-map-location-dot text-5xl text-accent10 mb-4"></i>
                             <h3 class="text-xl font-bold mb-2">일기도 업로드</h3>
-                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장 선택</p>
-                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-map" class="font-black text-accent10">0 / 28</span></div>
+                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 14장 선택</p>
+                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-map" class="font-black text-accent10">0 / 14</span></div>
                         </div>
                     </label>
                     <!-- 위성 영상 -->
@@ -230,8 +246,8 @@
                         <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 flex flex-col items-center text-center">
                             <i class="fa-solid fa-satellite text-5xl text-accent10 mb-4"></i>
                             <h3 class="text-xl font-bold mb-2">위성 업로드</h3>
-                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장 선택</p>
-                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-sat" class="font-black text-accent10">0 / 28</span></div>
+                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 14장 선택</p>
+                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-sat" class="font-black text-accent10">0 / 14</span></div>
                         </div>
                     </label>
                     <!-- 레이더 영상 -->
@@ -240,8 +256,8 @@
                         <div class="border-[3px] border-dashed border-text30 rounded-2xl p-6 h-full bg-white shadow-flat hover:bg-blue-50 flex flex-col items-center text-center">
                             <i class="fa-solid fa-satellite-dish text-5xl text-accent10 mb-4"></i>
                             <h3 class="text-xl font-bold mb-2">레이더 업로드</h3>
-                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 28장 선택</p>
-                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-radar" class="font-black text-accent10">0 / 28</span></div>
+                            <p class="text-xs font-medium text-slate-500 mb-4">클릭하여 14장 선택</p>
+                            <div class="bg-bg60 border-[2px] border-text30 rounded-full px-4 py-1"><span id="count-radar" class="font-black text-accent10">0 / 14</span></div>
                         </div>
                     </label>
                 </div>
@@ -263,7 +279,7 @@
                         </button>
                         <div class="flex-grow w-full flex items-center bg-bg60 p-3 rounded-xl border-[2px] border-text30">
                             <div id="time-display" class="font-black text-xl w-32 shrink-0 text-center text-text30">1일차 00:00</div>
-                            <input type="range" id="timeline-slider" min="0" max="27" value="0" class="w-full h-4 bg-white border-[2px] border-text30 rounded-lg appearance-none cursor-pointer mx-4 accent-[#2563EB]" oninput="seekFrame(this.value)">
+                            <input type="range" id="timeline-slider" min="0" max="13" value="0" class="w-full h-4 bg-white border-[2px] border-text30 rounded-lg appearance-none cursor-pointer mx-4 accent-[#2563EB]" oninput="seekFrame(this.value)">
                         </div>
                     </div>
                     
@@ -392,7 +408,7 @@
         // ------------------------------------
         // 상태 변수 정의 (이 부분에서 문법 오류가 발생했었습니다)
         // ------------------------------------
-        const MAX_FRAMES = 28;
+        const MAX_FRAMES = 14;
         
         // 올바른 자바스크립트 객체 구조
         const uploadedData = {
